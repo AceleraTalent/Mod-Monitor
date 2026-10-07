@@ -1,0 +1,7 @@
+{
+  "name": "token-monitor",
+  "version": "0.1.0",
+  "author": { "name": "AceleraTalent" },
+  "description": "Live token usage and context-window band above the prompt, plus a local /tokens command",
+  "types": "./types/index.d.ts"
+}
