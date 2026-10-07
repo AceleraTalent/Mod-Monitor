@@ -1,0 +1,12 @@
+{
+  "name": "mod-monitor",
+  "owner": { "name": "AceleraTalent" },
+  "metadata": { "description": "Mods de Claude Code de AceleraTalent" },
+  "plugins": [
+    {
+      "name": "token-monitor",
+      "source": "./",
+      "description": "Live token usage and context-window band above the prompt, plus a local /tokens command"
+    }
+  ]
+}
