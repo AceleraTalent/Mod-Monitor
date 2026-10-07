@@ -43,6 +43,32 @@ export const contextPercent = (c: Context): number | null => {
   return null
 }
 
+const BAR_WIDTH = 20
+
+/** The context level's colour: green below WARN, yellow up to ALERT, red past it. */
+export const levelColor = (pct: number | null): 'success' | 'warning' | 'error' | 'inactive' => {
+  if (pct === null) return 'inactive'
+  if (pct >= ALERT) return 'error'
+  if (pct >= WARN) return 'warning'
+
+  return 'success'
+}
+
+export const progressBar = (pct: number | null, width: number): string => {
+  const filled = Math.min(width, Math.max(0, Math.round(((pct ?? 0) / 100) * width)))
+
+  return '█'.repeat(filled) + '░'.repeat(width - filled)
+}
+
+/** The one-line status under the prompt, always on screen. */
+export const statusText = (t: Totals, c: Context): string => {
+  const pct = contextPercent(c)
+  const mark = pct !== null && pct >= ALERT ? '⚠ ' : '◆ '
+  const cost = c.usd === null ? '' : ` · $${c.usd.toFixed(2)}`
+
+  return `${mark}ctx ${pct === null ? '—' : `${pct}%`} ${progressBar(pct, 10)} · ▲ ${formatTokens(totalInput(t))} in · ▼ ${formatTokens(t.output)} out${cost}`
+}
+
 export const bandText = (t: Totals, c: Context): string => {
   const pct = contextPercent(c)
   const ctx = pct === null ? '—' : `~${pct}%`
@@ -86,6 +112,9 @@ const saveContext = ($: EngineInterface, ctx: SessionContextUsage, usd: number |
     usd: usd ?? null,
   }))
 
+const refreshStatus = async ($: EngineInterface) =>
+  $.ui.status(statusText(await read($, totals), await read($, context)))
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
@@ -98,6 +127,7 @@ export const register: Register = on => {
     await update($, totals, t =>
       t.since === usage.startedAt ? t : { ...EMPTY_TOTALS, since: usage.startedAt },
     )
+    await refreshStatus($)
 
     return next(e)
   })
@@ -117,6 +147,7 @@ export const register: Register = on => {
         model: usage.model,
         since: t.since,
       }))
+      await refreshStatus($)
     }
 
     return response
@@ -125,6 +156,7 @@ export const register: Register = on => {
   // The engine's own measure of the live window, pushed after each turn.
   on('session.measure', async ($, e, next) => {
     await saveContext($, e.context, e.cost?.usd)
+    await refreshStatus($)
 
     return next(e)
   })
@@ -140,28 +172,45 @@ export const register: Register = on => {
     const t = await read($, totals)
     const c = await read($, context)
     const pct = contextPercent(c)
-    const { Text } = $.ui.resolve(e)
-    const text = bandText(t, c)
-
-    if (pct !== null && pct >= ALERT) {
-      return (
-        <Text color="error" bold>
-          {`⚠ ${text}`}
-        </Text>
-      )
-    }
-    if (pct !== null && pct >= WARN) {
-      return (
-        <Text color="warning">
-          {text}
-        </Text>
-      )
-    }
+    const tone = levelColor(pct)
+    const isNarrow = (e.viewport?.columns ?? 120) < 90
+    const { Box, Text } = $.ui.resolve(e)
 
     return (
-      <Text dimColor>
-        {text}
-      </Text>
+      <Box borderStyle="round" borderColor={tone} paddingX={1} columnGap={2} flexWrap="wrap">
+        <Text color="claude" bold>
+          {e.props.isWorking ? '◆ TOKENS ●' : '◆ TOKENS'}
+        </Text>
+        <Box columnGap={1}>
+          <Text bold>Contexto</Text>
+          {!isNarrow && <Text color={tone}>{progressBar(pct, BAR_WIDTH)}</Text>}
+          <Text color={tone} bold>
+            {pct === null ? '—' : `${pct}%`}
+          </Text>
+          {pct !== null && pct >= ALERT && (
+            <Text color="error" bold>
+              ⚠ /compact
+            </Text>
+          )}
+        </Box>
+        <Text>
+          <Text color="suggestion" bold>
+            ▲ {formatTokens(totalInput(t))}
+          </Text>
+          <Text dimColor> in</Text>
+        </Text>
+        <Text>
+          <Text color="merged" bold>
+            ▼ {formatTokens(t.output)}
+          </Text>
+          <Text dimColor> out</Text>
+        </Text>
+        {c.usd !== null && (
+          <Text color="success" bold>
+            ${c.usd.toFixed(2)}
+          </Text>
+        )}
+      </Box>
     )
   })
 }

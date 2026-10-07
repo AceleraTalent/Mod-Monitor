@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { bandText, breakdownText, formatTokens } from '../hooks/register'
+import { bandText, breakdownText, formatTokens, progressBar, statusText } from '../hooks/register'
 
 const usage = {
   input_tokens: 1200,
@@ -30,6 +30,8 @@ test('the band text has the requested shape', async () => {
   const context = { tokens: 90_000, window: 200_000, percent: 45, usd: null }
   expect(bandText(totals, context)).toBe('[Contexto: ~45% | Tokens: 12.4k in / 1.8k out]')
   expect(breakdownText(totals, context)).toContain('Salida')
+  expect(statusText(totals, context)).toBe('◆ ctx 45% █████░░░░░ · ▲ 12.4k in · ▼ 1.8k out')
+  expect(progressBar(85, 20)).toBe('█'.repeat(17) + '░'.repeat(3))
 })
 
 test('counts model requests and answers /tokens locally', async ($, on) => {
@@ -67,10 +69,13 @@ for (const surface of ['terminal', 'desktop'] as const) {
       component: 'AbovePrompt',
       props: { hasSurvey: false, isWorking: false } as never,
     })
-    expect((await band.find({ type: 'Text' }))?.text).toContain('⚠ [Contexto: ~85%')
+    const drawn = JSON.stringify(await band.drawn())
+    expect(drawn).toContain('"borderColor":"error"')
+    expect(drawn).toContain('85%')
+    expect(drawn).toContain('⚠ /compact')
   })
 
-  test(`the band is plain below 70% on ${surface}`, async ($, on) => {
+  test(`the band is green below 70% on ${surface}`, async ($, on) => {
     on('session.measure', (_$, e) => ({ changed: e.changed }))
     await $.session.measure(measure(20_000, 200_000))
     const band = await $.ui.mount({
@@ -79,7 +84,9 @@ for (const surface of ['terminal', 'desktop'] as const) {
       component: 'AbovePrompt',
       props: { hasSurvey: false, isWorking: false } as never,
     })
-    const text = (await band.find({ type: 'Text' }))?.text
-    expect(text).toBe('[Contexto: ~10% | Tokens: 0 in / 0 out]')
+    const drawn = JSON.stringify(await band.drawn())
+    expect(drawn).toContain('"borderColor":"success"')
+    expect(drawn).toContain('10%')
+    expect(drawn).not.toContain('⚠')
   })
 }

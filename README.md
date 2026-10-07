@@ -3,12 +3,17 @@
 Mod de Claude Code que muestra, en tiempo real y sobre el prompt, el consumo de tokens y el llenado de la ventana de contexto:
 
 ```
-[Contexto: ~45% | Tokens: 12.4k in / 1.8k out]
+╭──────────────────────────────────────────────────────────────────────────╮
+│ ◆ TOKENS  Contexto █████████░░░░░░░░░░░ 45%  ▲ 12.4k in  ▼ 1.8k out  $2.28 │
+╰──────────────────────────────────────────────────────────────────────────╯
+◆ ctx 45% █████░░░░░ · ▲ 12.4k in · ▼ 1.8k out · $2.28      ← línea de estado fija
 ```
 
-- **< 70 %**: texto atenuado (normal).
+El color del borde y de la barra indica el nivel del contexto:
+
+- **< 70 %**: verde.
 - **70–79 %**: amarillo (`warning`).
-- **≥ 80 %**: rojo en negrita con `⚠` (`error`).
+- **≥ 80 %**: rojo, con `⚠ /compact`.
 
 Además añade el comando local **`/tokens`**, que imprime un desglose (entrada sin caché / escrita en caché / leída de caché, salida, peticiones, modelo, contexto y coste) **sin llamar al modelo**.
 
