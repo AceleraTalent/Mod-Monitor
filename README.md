@@ -17,6 +17,16 @@ El color del borde y de la barra indica el nivel del contexto:
 
 Además añade el comando local **`/tokens`**, que imprime un desglose (entrada sin caché / escrita en caché / leída de caché, salida, peticiones, modelo, contexto y coste) **sin llamar al modelo**.
 
+## Sesiones en la nube (claude.ai / app de Claude)
+
+En una sesión en la nube Claude Code corre sin pantalla propia (`surface: null`): el motor no dibuja la banda ni la línea de estado, porque no hay terminal ni escritorio conectados. En ese caso el mod deja, al final de cada turno, una línea de aviso en la conversación (que el modelo no lee):
+
+```
+◆ ctx 15% ██░░░░░░░░ · ▲ 295.6k in · ▼ 405 out · $2.28
+```
+
+`/tokens` funciona en cualquier sitio. Para ver la banda en vivo, ejecuta el mod en tu terminal o en la app de escritorio (abajo).
+
 ## Estructura
 
 ```

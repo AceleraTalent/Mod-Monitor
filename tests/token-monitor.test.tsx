@@ -1,4 +1,4 @@
-import { expect, test } from 'claude-code/testing'
+import { expect, mock, test } from 'claude-code/testing'
 
 import { bandText, breakdownText, formatTokens, progressBar, statusText } from '../hooks/register'
 
@@ -90,3 +90,20 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(drawn).not.toContain('⚠')
   })
 }
+
+test('with no surface attached, each main turn leaves the monitor in the transcript', async ($, on) => {
+  const session = mock.session(on)
+  on('session.measure', (_$, e) => ({ changed: e.changed }))
+  on('turn.complete', () => ({ text: 'ok' }))
+  on('session.start', (_$, e) => ({ cwd: e.cwd }))
+  on('command.register', (_$, e) => ({ value: { command: e.name } }))
+  on('ui.status', () => ({ value: undefined }))
+  on('session.usage', () => ({ value: { startedAt: 1, context: { window: 200_000 }, rateLimits: [] } }))
+  await $.session.start({ cwd: '/', surface: null, isInteractive: false })
+  await $.session.measure(measure(30_000, 200_000))
+  await $.turn.complete({
+    turnId: 't', reason: 'answer', answer: 'ok', durationMs: 1, isAborted: false,
+  } as never)
+  const rows = JSON.stringify(session.appended())
+  expect(rows).toContain('◆ ctx 15%')
+})

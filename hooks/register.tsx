@@ -116,7 +116,11 @@ const refreshStatus = async ($: EngineInterface) =>
   $.ui.status(statusText(await read($, totals), await read($, context)))
 
 export const register: Register = on => {
+  // Set by session.start, which runs again on every load of the module.
+  let hasSurface = true
+
   on('session.start', async ($, e, next) => {
+    hasSurface = e.surface !== null
     await $.command.register({
       name: COMMAND,
       description: 'Desglose local del consumo de tokens de la sesión',
@@ -159,6 +163,19 @@ export const register: Register = on => {
     await refreshStatus($)
 
     return next(e)
+  })
+
+  // A session with no surface attached (a cloud session followed from the
+  // Claude app) never draws the band or the status line: there the monitor
+  // rides the transcript instead, as a notice the model never reads.
+  on('turn.complete', async ($, e, next) => {
+    const ran = await next(e)
+    if (!e.agentId && !hasSurface) {
+      const text = statusText(await read($, totals), await read($, context))
+      await $.session.append({ message: { type: 'system', content: [{ type: 'text', text }] } })
+    }
+
+    return ran
   })
 
   // Answered here, without next: no model call is made.
